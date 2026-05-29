@@ -8,23 +8,30 @@ import {
   MessageCircle,
   Minus,
   Plus,
+  Search,
   ShoppingCart,
   Trash2,
   Truck,
   X
 } from "lucide-react";
 
+type Category = "Clásicos" | "Elegantes" | "Premium" | "Verano";
+
 type Product = {
   id: number;
   name: string;
+  category: Category;
   price: number;
   image: string;
   description: string;
+  badge?: string;
 };
 
 type CartItem = Product & {
   quantity: number;
 };
+
+type SortOption = "featured" | "price-asc" | "price-desc";
 
 const WHATSAPP_NUMBER = "573215625844";
 
@@ -32,13 +39,16 @@ const products: Product[] = [
   {
     id: 1,
     name: "Sombrero Aguadeño Clásico",
+    category: "Clásicos",
     price: 189000,
     image: "https://picsum.photos/seed/sombrero-aguadeno/700/800",
-    description: "Tejido a mano con ala firme y copa tradicional."
+    description: "Tejido a mano con ala firme y copa tradicional.",
+    badge: "Más vendido"
   },
   {
     id: 2,
     name: "Sombrero Café Dorado",
+    category: "Elegantes",
     price: 219000,
     image: "https://picsum.photos/seed/sombrero-cafe/700/800",
     description: "Acabado cálido con cinta artesanal de contraste."
@@ -46,11 +56,56 @@ const products: Product[] = [
   {
     id: 3,
     name: "Sombrero Fino Lasso",
+    category: "Premium",
     price: 269000,
     image: "https://picsum.photos/seed/sombrero-fino/700/800",
-    description: "Pieza elegante para vestir tradición colombiana."
+    description: "Pieza elegante para vestir tradición colombiana.",
+    badge: "Premium"
+  },
+  {
+    id: 4,
+    name: "Sombrero Palma Natural",
+    category: "Verano",
+    price: 169000,
+    image: "https://picsum.photos/seed/sombrero-palma/700/800",
+    description: "Ligero, fresco y cómodo para días soleados."
+  },
+  {
+    id: 5,
+    name: "Sombrero Cinta Caramelo",
+    category: "Elegantes",
+    price: 239000,
+    image: "https://picsum.photos/seed/sombrero-caramelo/700/800",
+    description: "Cinta en tono caramelo con silueta sobria y versátil.",
+    badge: "Nuevo"
+  },
+  {
+    id: 6,
+    name: "Sombrero Tradición Andina",
+    category: "Clásicos",
+    price: 199000,
+    image: "https://picsum.photos/seed/sombrero-andino/700/800",
+    description: "Inspirado en formas tradicionales de la montaña colombiana."
+  },
+  {
+    id: 7,
+    name: "Sombrero Lasso Ejecutivo",
+    category: "Premium",
+    price: 299000,
+    image: "https://picsum.photos/seed/sombrero-ejecutivo/700/800",
+    description: "Acabado fino para eventos, viajes y uso urbano."
+  },
+  {
+    id: 8,
+    name: "Sombrero Arena Costera",
+    category: "Verano",
+    price: 179000,
+    image: "https://picsum.photos/seed/sombrero-arena/700/800",
+    description: "Diseño amplio con presencia relajada y protección solar."
   }
 ];
+
+const categories = ["Todos", "Clásicos", "Elegantes", "Premium", "Verano"] as const;
 
 const navItems = [
   { label: "Catálogo", href: "#catalogo" },
@@ -134,12 +189,9 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[#f7efe2] text-[#24160f]">
-      <Navbar
-        cartCount={cartCount}
-        onCartOpen={() => setIsCartOpen(true)}
-      />
+      <Navbar cartCount={cartCount} onCartOpen={() => setIsCartOpen(true)} />
       <Hero />
-      <CatalogPreview onAddToCart={addToCart} />
+      <CatalogSection onAddToCart={addToCart} />
       <TrustSection />
       <Footer />
       <CartDrawer
@@ -270,68 +322,192 @@ function Hero() {
   );
 }
 
-function CatalogPreview({
+function CatalogSection({
   onAddToCart
 }: {
   onAddToCart: (product: Product) => void;
 }) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeCategory, setActiveCategory] =
+    useState<(typeof categories)[number]>("Todos");
+  const [sortOption, setSortOption] = useState<SortOption>("featured");
+
+  const filteredProducts = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+
+    return products
+      .filter((product) => {
+        const matchesCategory =
+          activeCategory === "Todos" || product.category === activeCategory;
+        const matchesSearch =
+          normalizedSearch.length === 0 ||
+          product.name.toLowerCase().includes(normalizedSearch) ||
+          product.description.toLowerCase().includes(normalizedSearch) ||
+          product.category.toLowerCase().includes(normalizedSearch);
+
+        return matchesCategory && matchesSearch;
+      })
+      .sort((a, b) => {
+        if (sortOption === "price-asc") {
+          return a.price - b.price;
+        }
+
+        if (sortOption === "price-desc") {
+          return b.price - a.price;
+        }
+
+        return a.id - b.id;
+      });
+  }, [activeCategory, searchTerm, sortOption]);
+
   return (
     <section id="catalogo" className="bg-[#fff8ec] px-5 py-20 sm:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#9b6b21]">
-              Catálogo preview
+              Catálogo
             </p>
             <h2 className="mt-3 font-serif text-4xl font-bold text-[#3a2418] sm:text-5xl">
-              Selección artesanal
+              Sombreros artesanales
             </h2>
           </div>
           <p className="max-w-xl text-base leading-7 text-[#6f523b]">
-            Tres estilos pensados para quienes buscan una pieza sobria, durable
-            y con carácter colombiano.
+            Explora estilos clásicos, elegantes, premium y de verano. Las fotos
+            son temporales mientras definimos la producción visual real.
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
-          {products.map((product) => (
-            <article
-              key={product.id}
-              className="overflow-hidden rounded-lg border border-[#e4d0af] bg-[#f7efe2] shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-[#3a2418]/10"
-            >
-              <div className="relative aspect-[4/5]">
-                <Image
-                  src={product.image}
-                  alt={product.name}
-                  fill
-                  sizes="(min-width: 768px) 33vw, 100vw"
-                  className="object-cover"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="font-serif text-2xl font-bold text-[#3a2418]">
-                  {product.name}
-                </h3>
-                <p className="mt-3 min-h-14 text-sm leading-6 text-[#6f523b]">
-                  {product.description}
-                </p>
-                <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <span className="text-lg font-bold text-[#8a5a19]">
-                    {formatPrice(product.price)}
-                  </span>
+        <div className="mb-8 rounded-lg border border-[#e4d0af] bg-[#f7efe2] p-4">
+          <div className="grid gap-4 lg:grid-cols-[1fr_auto_auto] lg:items-center">
+            <label className="relative block">
+              <span className="sr-only">Buscar producto</span>
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8a5a19]" />
+              <input
+                type="search"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Buscar por nombre, estilo o descripción"
+                className="h-12 w-full rounded-full border border-[#d9c3a0] bg-[#fff8ec] pl-12 pr-4 text-sm font-medium text-[#3a2418] outline-none transition placeholder:text-[#8a745e] focus:border-[#9b6b21] focus:ring-2 focus:ring-[#d9ad5d]/40"
+              />
+            </label>
+
+            <div className="flex gap-2 overflow-x-auto pb-1 lg:max-w-xl">
+              {categories.map((category) => {
+                const isActive = activeCategory === category;
+
+                return (
                   <button
+                    key={category}
                     type="button"
-                    onClick={() => onAddToCart(product)}
-                    className="inline-flex items-center justify-center gap-2 rounded-full bg-[#3a2418] px-4 py-2 text-sm font-semibold text-[#fff8ec] transition hover:bg-[#5a3825]"
+                    onClick={() => setActiveCategory(category)}
+                    className={`shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                      isActive
+                        ? "border-[#3a2418] bg-[#3a2418] text-[#fff8ec]"
+                        : "border-[#d9c3a0] bg-[#fff8ec] text-[#5f432f] hover:border-[#9b6b21]"
+                    }`}
                   >
-                    <ShoppingCart className="h-4 w-4" />
-                    Añadir
+                    {category}
                   </button>
-                </div>
-              </div>
-            </article>
-          ))}
+                );
+              })}
+            </div>
+
+            <label className="block">
+              <span className="sr-only">Ordenar productos</span>
+              <select
+                value={sortOption}
+                onChange={(event) =>
+                  setSortOption(event.target.value as SortOption)
+                }
+                className="h-12 w-full rounded-full border border-[#d9c3a0] bg-[#fff8ec] px-4 text-sm font-semibold text-[#4b2f20] outline-none transition focus:border-[#9b6b21] focus:ring-2 focus:ring-[#d9ad5d]/40 lg:w-48"
+              >
+                <option value="featured">Destacados</option>
+                <option value="price-asc">Menor precio</option>
+                <option value="price-desc">Mayor precio</option>
+              </select>
+            </label>
+          </div>
         </div>
+
+        <div className="mb-5 flex items-center justify-between gap-4 text-sm text-[#6f523b]">
+          <p>
+            {filteredProducts.length}{" "}
+            {filteredProducts.length === 1 ? "producto" : "productos"}
+          </p>
+          {(searchTerm || activeCategory !== "Todos") && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm("");
+                setActiveCategory("Todos");
+                setSortOption("featured");
+              }}
+              className="font-semibold text-[#8a5a19] transition hover:text-[#3a2418]"
+            >
+              Limpiar filtros
+            </button>
+          )}
+        </div>
+
+        {filteredProducts.length > 0 ? (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {filteredProducts.map((product) => (
+              <article
+                key={product.id}
+                className="overflow-hidden rounded-lg border border-[#e4d0af] bg-[#f7efe2] shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-[#3a2418]/10"
+              >
+                <div className="relative aspect-[4/5]">
+                  <Image
+                    src={product.image}
+                    alt={product.name}
+                    fill
+                    sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+                    className="object-cover"
+                  />
+                  {product.badge ? (
+                    <span className="absolute left-4 top-4 rounded-full bg-[#d9ad5d] px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-[#24160f]">
+                      {product.badge}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="p-5">
+                  <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-[#9b6b21]">
+                    {product.category}
+                  </p>
+                  <h3 className="font-serif text-2xl font-bold leading-7 text-[#3a2418]">
+                    {product.name}
+                  </h3>
+                  <p className="mt-3 min-h-16 text-sm leading-6 text-[#6f523b]">
+                    {product.description}
+                  </p>
+                  <div className="mt-6 flex flex-col gap-4">
+                    <span className="text-lg font-bold text-[#8a5a19]">
+                      {formatPrice(product.price)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onAddToCart(product)}
+                      className="inline-flex items-center justify-center gap-2 rounded-full bg-[#3a2418] px-4 py-2.5 text-sm font-semibold text-[#fff8ec] transition hover:bg-[#5a3825]"
+                    >
+                      <ShoppingCart className="h-4 w-4" />
+                      Añadir al carrito
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-lg border border-[#e4d0af] bg-[#f7efe2] px-6 py-12 text-center">
+            <p className="font-serif text-2xl font-bold text-[#3a2418]">
+              No encontramos sombreros con esos filtros
+            </p>
+            <p className="mt-3 text-sm text-[#6f523b]">
+              Prueba con otra categoría o limpia la búsqueda.
+            </p>
+          </div>
+        )}
       </div>
     </section>
   );
