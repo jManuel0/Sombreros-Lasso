@@ -1,9 +1,14 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
 import {
   CreditCard,
+  Menu,
   MessageCircle,
   ShoppingCart,
-  Truck
+  Truck,
+  X
 } from "lucide-react";
 
 type Product = {
@@ -34,7 +39,11 @@ const products: Product[] = [
   }
 ];
 
-const navLinks = ["Catálogo", "Nosotros", "Contacto"];
+const navItems = [
+  { label: "Catálogo", href: "#catalogo" },
+  { label: "Nosotros", href: "#nosotros" },
+  { label: "Contacto", href: "#contacto" }
+];
 
 export default function Home() {
   return (
@@ -49,6 +58,8 @@ export default function Home() {
 }
 
 function Navbar() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   return (
     <header className="sticky top-0 z-50 border-b border-[#d9c3a0]/70 bg-[#f7efe2]/90 backdrop-blur-md">
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
@@ -57,25 +68,58 @@ function Navbar() {
         </a>
 
         <div className="hidden items-center gap-8 md:flex">
-          {navLinks.map((link) => (
+          {navItems.map((item) => (
             <a
-              key={link}
-              href={`#${link.toLowerCase()}`}
+              key={item.label}
+              href={item.href}
               className="text-sm font-medium text-[#5f432f] transition hover:text-[#9b6b21]"
             >
-              {link}
+              {item.label}
             </a>
           ))}
         </div>
 
-        <button
-          type="button"
-          aria-label="Abrir carrito"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#b78b4b] bg-[#fff8ec] text-[#4b2f20] shadow-sm transition hover:-translate-y-0.5 hover:bg-[#f2dfbd]"
-        >
-          <ShoppingCart className="h-5 w-5" />
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            aria-label="Abrir carrito"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#b78b4b] bg-[#fff8ec] text-[#4b2f20] shadow-sm transition hover:-translate-y-0.5 hover:bg-[#f2dfbd]"
+          >
+            <ShoppingCart className="h-5 w-5" />
+          </button>
+
+          <button
+            type="button"
+            aria-label={isMenuOpen ? "Cerrar menú" : "Abrir menú"}
+            aria-expanded={isMenuOpen}
+            onClick={() => setIsMenuOpen((current) => !current)}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#b78b4b] bg-[#3a2418] text-[#fff8ec] shadow-sm transition hover:bg-[#5a3825] md:hidden"
+          >
+            {isMenuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
+          </button>
+        </div>
       </nav>
+
+      {isMenuOpen ? (
+        <div className="border-t border-[#d9c3a0]/70 bg-[#fff8ec] px-5 py-4 shadow-lg md:hidden">
+          <div className="mx-auto flex max-w-7xl flex-col gap-2">
+            {navItems.map((item) => (
+              <a
+                key={item.label}
+                href={item.href}
+                onClick={() => setIsMenuOpen(false)}
+                className="rounded-lg px-4 py-3 text-base font-semibold text-[#4b2f20] transition hover:bg-[#f2dfbd] hover:text-[#8a5a19]"
+              >
+                {item.label}
+              </a>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </header>
   );
 }
@@ -105,7 +149,7 @@ function Hero() {
             y momentos donde vestir bien también cuenta una historia.
           </p>
           <a
-            href="#catálogo"
+            href="#catalogo"
             className="mt-9 inline-flex items-center justify-center rounded-full bg-[#c8953d] px-7 py-3 text-sm font-bold uppercase tracking-[0.18em] text-[#24160f] shadow-lg shadow-black/20 transition hover:-translate-y-1 hover:bg-[#d9ad5d]"
           >
             Ver catálogo
@@ -118,7 +162,7 @@ function Hero() {
 
 function CatalogPreview() {
   return (
-    <section id="catálogo" className="bg-[#fff8ec] px-5 py-20 sm:px-8">
+    <section id="catalogo" className="bg-[#fff8ec] px-5 py-20 sm:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
@@ -198,7 +242,10 @@ function TrustSection() {
   ];
 
   return (
-    <section id="nosotros" className="bg-[#3a2418] px-5 py-16 text-[#fff8ec] sm:px-8">
+    <section
+      id="nosotros"
+      className="bg-[#3a2418] px-5 py-16 text-[#fff8ec] sm:px-8"
+    >
       <div className="mx-auto grid max-w-7xl gap-5 md:grid-cols-3">
         {items.map((item) => {
           const Icon = item.icon;
@@ -225,7 +272,10 @@ function TrustSection() {
 
 function Footer() {
   return (
-    <footer id="contacto" className="border-t border-[#d9c3a0] bg-[#24160f] px-5 py-10 text-[#fff8ec] sm:px-8">
+    <footer
+      id="contacto"
+      className="border-t border-[#d9c3a0] bg-[#24160f] px-5 py-10 text-[#fff8ec] sm:px-8"
+    >
       <div className="mx-auto flex max-w-7xl flex-col gap-8 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="font-serif text-2xl font-bold">Sombreros Lasso</p>
@@ -235,13 +285,13 @@ function Footer() {
         </div>
 
         <div className="flex flex-wrap gap-5 text-sm font-medium text-[#f4dfbd]">
-          {navLinks.map((link) => (
+          {navItems.map((item) => (
             <a
-              key={link}
-              href={`#${link.toLowerCase()}`}
+              key={item.label}
+              href={item.href}
               className="transition hover:text-[#d9ad5d]"
             >
-              {link}
+              {item.label}
             </a>
           ))}
         </div>
