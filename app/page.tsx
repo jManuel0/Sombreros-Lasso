@@ -1,39 +1,52 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import {
   CreditCard,
   Menu,
   MessageCircle,
+  Minus,
+  Plus,
   ShoppingCart,
+  Trash2,
   Truck,
   X
 } from "lucide-react";
 
 type Product = {
+  id: number;
   name: string;
-  price: string;
+  price: number;
   image: string;
   description: string;
 };
 
+type CartItem = Product & {
+  quantity: number;
+};
+
+const WHATSAPP_NUMBER = "573215625844";
+
 const products: Product[] = [
   {
+    id: 1,
     name: "Sombrero Aguadeño Clásico",
-    price: "$189.000 COP",
+    price: 189000,
     image: "https://picsum.photos/seed/sombrero-aguadeno/700/800",
     description: "Tejido a mano con ala firme y copa tradicional."
   },
   {
+    id: 2,
     name: "Sombrero Café Dorado",
-    price: "$219.000 COP",
+    price: 219000,
     image: "https://picsum.photos/seed/sombrero-cafe/700/800",
     description: "Acabado cálido con cinta artesanal de contraste."
   },
   {
+    id: 3,
     name: "Sombrero Fino Lasso",
-    price: "$269.000 COP",
+    price: 269000,
     image: "https://picsum.photos/seed/sombrero-fino/700/800",
     description: "Pieza elegante para vestir tradición colombiana."
   }
@@ -45,19 +58,110 @@ const navItems = [
   { label: "Contacto", href: "#contacto" }
 ];
 
+const formatPrice = (price: number) =>
+  new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency: "COP",
+    maximumFractionDigits: 0
+  }).format(price);
+
 export default function Home() {
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+
+  const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+  const subtotal = cartItems.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
+
+  const whatsappHref = useMemo(() => {
+    const productLines = cartItems
+      .map(
+        (item) =>
+          `- ${item.quantity} x ${item.name} (${formatPrice(
+            item.price * item.quantity
+          )})`
+      )
+      .join("\n");
+
+    const message = `Hola, quiero hacer este pedido en Sombreros Lasso:\n\n${productLines}\n\nSubtotal: ${formatPrice(
+      subtotal
+    )}`;
+
+    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+      message
+    )}`;
+  }, [cartItems, subtotal]);
+
+  function addToCart(product: Product) {
+    setCartItems((currentItems) => {
+      const existingItem = currentItems.find((item) => item.id === product.id);
+
+      if (existingItem) {
+        return currentItems.map((item) =>
+          item.id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        );
+      }
+
+      return [...currentItems, { ...product, quantity: 1 }];
+    });
+    setIsCartOpen(true);
+  }
+
+  function updateQuantity(productId: number, quantity: number) {
+    if (quantity < 1) {
+      setCartItems((currentItems) =>
+        currentItems.filter((item) => item.id !== productId)
+      );
+      return;
+    }
+
+    setCartItems((currentItems) =>
+      currentItems.map((item) =>
+        item.id === productId ? { ...item, quantity } : item
+      )
+    );
+  }
+
+  function removeFromCart(productId: number) {
+    setCartItems((currentItems) =>
+      currentItems.filter((item) => item.id !== productId)
+    );
+  }
+
   return (
     <main className="min-h-screen bg-[#f7efe2] text-[#24160f]">
-      <Navbar />
+      <Navbar
+        cartCount={cartCount}
+        onCartOpen={() => setIsCartOpen(true)}
+      />
       <Hero />
-      <CatalogPreview />
+      <CatalogPreview onAddToCart={addToCart} />
       <TrustSection />
       <Footer />
+      <CartDrawer
+        cartItems={cartItems}
+        isOpen={isCartOpen}
+        subtotal={subtotal}
+        whatsappHref={whatsappHref}
+        onClose={() => setIsCartOpen(false)}
+        onQuantityChange={updateQuantity}
+        onRemove={removeFromCart}
+      />
     </main>
   );
 }
 
-function Navbar() {
+function Navbar({
+  cartCount,
+  onCartOpen
+}: {
+  cartCount: number;
+  onCartOpen: () => void;
+}) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
@@ -83,9 +187,15 @@ function Navbar() {
           <button
             type="button"
             aria-label="Abrir carrito"
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#b78b4b] bg-[#fff8ec] text-[#4b2f20] shadow-sm transition hover:-translate-y-0.5 hover:bg-[#f2dfbd]"
+            onClick={onCartOpen}
+            className="relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#b78b4b] bg-[#fff8ec] text-[#4b2f20] shadow-sm transition hover:-translate-y-0.5 hover:bg-[#f2dfbd]"
           >
             <ShoppingCart className="h-5 w-5" />
+            {cartCount > 0 ? (
+              <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#c8953d] px-1 text-xs font-bold text-[#24160f]">
+                {cartCount}
+              </span>
+            ) : null}
           </button>
 
           <button
@@ -160,7 +270,11 @@ function Hero() {
   );
 }
 
-function CatalogPreview() {
+function CatalogPreview({
+  onAddToCart
+}: {
+  onAddToCart: (product: Product) => void;
+}) {
   return (
     <section id="catalogo" className="bg-[#fff8ec] px-5 py-20 sm:px-8">
       <div className="mx-auto max-w-7xl">
@@ -182,7 +296,7 @@ function CatalogPreview() {
         <div className="grid gap-6 md:grid-cols-3">
           {products.map((product) => (
             <article
-              key={product.name}
+              key={product.id}
               className="overflow-hidden rounded-lg border border-[#e4d0af] bg-[#f7efe2] shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-[#3a2418]/10"
             >
               <div className="relative aspect-[4/5]">
@@ -201,13 +315,14 @@ function CatalogPreview() {
                 <p className="mt-3 min-h-14 text-sm leading-6 text-[#6f523b]">
                   {product.description}
                 </p>
-                <div className="mt-6 flex items-center justify-between gap-4">
+                <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-lg font-bold text-[#8a5a19]">
-                    {product.price}
+                    {formatPrice(product.price)}
                   </span>
                   <button
                     type="button"
-                    className="inline-flex items-center gap-2 rounded-full bg-[#3a2418] px-4 py-2 text-sm font-semibold text-[#fff8ec] transition hover:bg-[#5a3825]"
+                    onClick={() => onAddToCart(product)}
+                    className="inline-flex items-center justify-center gap-2 rounded-full bg-[#3a2418] px-4 py-2 text-sm font-semibold text-[#fff8ec] transition hover:bg-[#5a3825]"
                   >
                     <ShoppingCart className="h-4 w-4" />
                     Añadir
@@ -219,6 +334,177 @@ function CatalogPreview() {
         </div>
       </div>
     </section>
+  );
+}
+
+function CartDrawer({
+  cartItems,
+  isOpen,
+  subtotal,
+  whatsappHref,
+  onClose,
+  onQuantityChange,
+  onRemove
+}: {
+  cartItems: CartItem[];
+  isOpen: boolean;
+  subtotal: number;
+  whatsappHref: string;
+  onClose: () => void;
+  onQuantityChange: (productId: number, quantity: number) => void;
+  onRemove: (productId: number) => void;
+}) {
+  return (
+    <div
+      className={`fixed inset-0 z-[60] transition ${
+        isOpen ? "pointer-events-auto" : "pointer-events-none"
+      }`}
+      aria-hidden={!isOpen}
+    >
+      <button
+        type="button"
+        aria-label="Cerrar carrito"
+        onClick={onClose}
+        className={`absolute inset-0 bg-black/45 transition-opacity ${
+          isOpen ? "opacity-100" : "opacity-0"
+        }`}
+      />
+
+      <aside
+        className={`absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-[#fff8ec] shadow-2xl transition-transform duration-300 ${
+          isOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        <div className="flex items-center justify-between border-b border-[#e4d0af] px-5 py-5">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#9b6b21]">
+              Tu pedido
+            </p>
+            <h2 className="font-serif text-3xl font-bold text-[#3a2418]">
+              Carrito
+            </h2>
+          </div>
+          <button
+            type="button"
+            aria-label="Cerrar carrito"
+            onClick={onClose}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#3a2418] text-[#fff8ec] transition hover:bg-[#5a3825]"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-5">
+          {cartItems.length === 0 ? (
+            <div className="flex h-full flex-col items-center justify-center text-center">
+              <div className="mb-5 inline-flex h-16 w-16 items-center justify-center rounded-full bg-[#f2dfbd] text-[#4b2f20]">
+                <ShoppingCart className="h-7 w-7" />
+              </div>
+              <p className="font-serif text-2xl font-bold text-[#3a2418]">
+                Tu carrito está vacío
+              </p>
+              <p className="mt-3 max-w-xs text-sm leading-6 text-[#6f523b]">
+                Agrega un sombrero del catálogo para preparar el pedido por
+                WhatsApp.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {cartItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="grid grid-cols-[82px_1fr] gap-4 rounded-lg border border-[#e4d0af] bg-[#f7efe2] p-3"
+                >
+                  <div className="relative aspect-square overflow-hidden rounded-md">
+                    <Image
+                      src={item.image}
+                      alt={item.name}
+                      fill
+                      sizes="82px"
+                      className="object-cover"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="font-serif text-lg font-bold leading-6 text-[#3a2418]">
+                          {item.name}
+                        </h3>
+                        <p className="mt-1 text-sm font-semibold text-[#8a5a19]">
+                          {formatPrice(item.price)}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        aria-label={`Eliminar ${item.name}`}
+                        onClick={() => onRemove(item.id)}
+                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#7b4b32] transition hover:bg-[#ead6b7]"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-between">
+                      <div className="inline-flex items-center rounded-full border border-[#d9c3a0] bg-[#fff8ec]">
+                        <button
+                          type="button"
+                          aria-label={`Disminuir cantidad de ${item.name}`}
+                          onClick={() =>
+                            onQuantityChange(item.id, item.quantity - 1)
+                          }
+                          className="inline-flex h-9 w-9 items-center justify-center text-[#4b2f20] transition hover:bg-[#f2dfbd]"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </button>
+                        <span className="min-w-8 text-center text-sm font-bold">
+                          {item.quantity}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label={`Aumentar cantidad de ${item.name}`}
+                          onClick={() =>
+                            onQuantityChange(item.id, item.quantity + 1)
+                          }
+                          className="inline-flex h-9 w-9 items-center justify-center text-[#4b2f20] transition hover:bg-[#f2dfbd]"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <span className="text-sm font-bold text-[#3a2418]">
+                        {formatPrice(item.price * item.quantity)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-[#e4d0af] px-5 py-5">
+          <div className="mb-4 flex items-center justify-between text-[#3a2418]">
+            <span className="text-sm font-semibold uppercase tracking-[0.18em]">
+              Subtotal
+            </span>
+            <span className="font-serif text-2xl font-bold">
+              {formatPrice(subtotal)}
+            </span>
+          </div>
+          <a
+            href={cartItems.length > 0 ? whatsappHref : undefined}
+            aria-disabled={cartItems.length === 0}
+            className={`inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-bold uppercase tracking-[0.16em] transition ${
+              cartItems.length > 0
+                ? "bg-[#3a2418] text-[#fff8ec] hover:bg-[#5a3825]"
+                : "cursor-not-allowed bg-[#d9c3a0] text-[#7b5b43]"
+            }`}
+          >
+            <MessageCircle className="h-5 w-5" />
+            Pedir por WhatsApp
+          </a>
+        </div>
+      </aside>
+    </div>
   );
 }
 
@@ -297,7 +583,7 @@ function Footer() {
         </div>
 
         <a
-          href="https://wa.me/573215625844"
+          href={`https://wa.me/${WHATSAPP_NUMBER}`}
           className="text-sm font-semibold text-[#d9ad5d] transition hover:text-[#fff8ec]"
         >
           WhatsApp: +57 321 562 5844
