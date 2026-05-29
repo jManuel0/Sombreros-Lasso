@@ -250,7 +250,7 @@ function Footer() {
           href="https://wa.me/573001234567"
           className="text-sm font-semibold text-[#d9ad5d] transition hover:text-[#fff8ec]"
         >
-          WhatsApp: +57 300 123 4567
+          WhatsApp: +57 3215625844
         </a>
       </div>
     </footer>
